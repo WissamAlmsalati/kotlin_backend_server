@@ -1,5 +1,6 @@
 package org.example
 
+import UserService
 import services.ProductService
 import io.ktor.application.*
 import io.ktor.features.ContentNegotiation
@@ -11,8 +12,8 @@ import io.ktor.routing.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import org.example.routes.productRoutes
-import org.example.routes.userRoutes
-import services.UserService
+import userRoutes
+
 
 fun Application.module() {
     install(ContentNegotiation) {
@@ -35,7 +36,7 @@ fun Application.module() {
     val productService = ProductService()
 
     install(Routing) {
-        userRoutes(userService)
+        userRoutes( userService)
         productRoutes(productService)
     }
 }

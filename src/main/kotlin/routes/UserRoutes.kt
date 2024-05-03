@@ -1,69 +1,58 @@
-package org.example.routes
-
 import io.ktor.application.*
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
+import io.ktor.response.*
 import io.ktor.request.*
-import io.ktor.response.respond
 import io.ktor.routing.*
-import org.example.models.LoginRequest
-import org.example.models.UpdateRequest
-import org.example.models.User
-import services.UserService
+import org.example.models.SignUpRequest
+import org.example.models.UserModel
 
-fun Route.userRoutes(userService: UserService) {
+fun Route.userRoutes(connection: UserService) {
+    val userService = UserService()
+
     route("/users") {
-        post {
-            val user = call.receive<User>()
-            userService.addUser(user)
-            call.respond(HttpStatusCode.Created)
-        }
-
-        get {
-            call.respond(userService.viewUsers())
-        }
-
-        put("/{id}") {
-            val id = call.parameters["id"]?.toIntOrNull()
-            val user = call.receive<User>()
-            if (id != null) {
-                userService.updateUser(id, user)
-                call.respond(HttpStatusCode.OK)
-            } else {
-                call.respond(HttpStatusCode.BadRequest, "Invalid or missing id")
-            }
-        }
-
-        delete("/{id}") {
-            val id = call.parameters["id"]?.toIntOrNull()
-            if (id != null) {
-                userService.deleteUser(id)
-                call.respond(HttpStatusCode.NoContent)
-            } else {
-                call.respond(HttpStatusCode.BadRequest, "Invalid or missing id")
-            }
-        }
 
         post("/signup") {
-            val user = call.receive<User>()
-            val result = userService.signup(user)
-            call.respond(result)
-        }
+    val signUpRequest = call.receive<SignUpRequest>()
+    val user = UserModel(
+        id = signUpRequest.id,
+        email = signUpRequest.email,
+        password = signUpRequest.password,
+        phone = signUpRequest.phone,
+        username = signUpRequest.username
+    )
+    val createdUser = userService.signUp(user)
+            System.out.println(createdUser)
+    call.respond(HttpStatusCode.Created, createdUser)
+}
 
         post("/login") {
-            val loginRequest = call.receive<LoginRequest>()
-            val result = userService.login(loginRequest.email, null, loginRequest.password)
-            call.respond(result)
-        }
-
-        put("/{id}/update") {
-            val id = call.parameters["id"]?.toIntOrNull()
-            val updateRequest = call.receive<UpdateRequest>()
-            if (id != null) {
-                val result = userService.updateUser(id, updateRequest.username, updateRequest.password)
-                call.respond(result)
+            val params = call.receiveParameters()
+            val email = params["email"] ?: return@post call.respond(HttpStatusCode.BadRequest, "Email is required.")
+            val password = params["password"] ?: return@post call.respond(HttpStatusCode.BadRequest, "Password is required.")
+            val user = userService.login(email, password)
+            if (user != null) {
+                call.respond(user)
             } else {
-                call.respond(HttpStatusCode.BadRequest, "Invalid or missing id")
+                call.respond(HttpStatusCode.Unauthorized, "Invalid email or password.")
             }
+        }
+        get("/{id}") {
+            val userId = call.parameters["id"]?.toInt() ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val user = userService.getUserById(userId) ?: return@get call.respond(HttpStatusCode.NotFound)
+            call.respond(user)
+        }
+        delete("/{id}") {
+            val userId = call.parameters["id"]?.toInt() ?: return@delete call.respond(HttpStatusCode.BadRequest)
+            val deletedUser = userService.deleteUser(userId)
+            if (deletedUser != null) {
+                call.respond(deletedUser)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
+        get {
+            val allUsers = userService.getAllUsers()
+            call.respond(allUsers)
         }
     }
 }

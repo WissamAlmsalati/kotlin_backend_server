@@ -1,144 +1,90 @@
-package services
-
-import org.example.models.User
-import java.sql.Connection
+import org.example.models.UserModel
 import java.sql.DriverManager
-import java.sql.PreparedStatement
 
-class UserService {
-    private fun connectToDatabase(): Connection? {
-        val url = "jdbc:mysql://localhost:3306/kotlin_app"
-        val username = "root"
-        val password = "11111111"
+class UserService() {
 
-        return try {
-            Class.forName("com.mysql.cj.jdbc.Driver")
-            DriverManager.getConnection(url, username, password)
-        } catch (e: Exception) {
-            e.printStackTrace()
+    val url = "jdbc:mysql://localhost:3306/kotlin_app" // replace with your database URL
+    val dbUsername = "root" // replace with your database username
+    val dbPassword = "11111111" // replace with your database password
+
+    val connection = DriverManager.getConnection(url, dbUsername, dbPassword)
+
+    fun signUp(user: UserModel): UserModel {
+        val query = "INSERT INTO users (id, username, email, password, phone) VALUES (?, ?, ?, ?, ?)"
+        val preparedStatement = connection.prepareStatement(query)
+        preparedStatement.setInt(1, user.id) // changed from setString to setInt
+        preparedStatement.setString(2, user.username)
+        preparedStatement.setString(3, user.email)
+        preparedStatement.setString(4, user.password)
+        preparedStatement.setString(5, user.phone)
+        preparedStatement.executeUpdate()
+        return user
+    }
+
+    fun login(email: String, password: String): UserModel? {
+        val query = "SELECT * FROM users WHERE email = ? AND password = ?"
+        val preparedStatement = connection.prepareStatement(query)
+        preparedStatement.setString(1, email)
+        preparedStatement.setString(2, password)
+        val resultSet = preparedStatement.executeQuery()
+        return if (resultSet.next()) {
+            UserModel(
+                id = resultSet.getInt("id"), // changed from getString to getInt
+                username = resultSet.getString("username"),
+                email = resultSet.getString("email"),
+                password = resultSet.getString("password"),
+                phone = resultSet.getString("phone")
+            )
+        } else {
             null
         }
     }
 
-    fun addUser(user: User) {
-        val connection = connectToDatabase()
-        connection?.let {
-            val preparedStatement = it.prepareStatement("INSERT INTO users (email, username, password) VALUES (?, ?, ?)")
-            preparedStatement.setString(1, user.email)
-            preparedStatement.setString(2, user.username)
-            preparedStatement.setString(3, user.password)
-            val affectedRows = preparedStatement.executeUpdate()
-            if (affectedRows > 0) {
-                println("User added successfully.")
-            } else {
-                println("Failed to add user.")
-            }
-        }
-    }
-
-    fun viewUsers(): List<User> {
-        val users = mutableListOf<User>()
-        val connection = connectToDatabase()
-        connection?.let {
-            val statement = it.createStatement()
-            val resultSet = statement.executeQuery("SELECT * FROM users")
-
-            while (resultSet.next()) {
-                val id = resultSet.getInt("id")
-                val email = resultSet.getString("email")
-                val username = resultSet.getString("username")
-                val password = resultSet.getString("password")
-
-                users.add(User(id, email, username, password))
-            }
+    fun getAllUsers(): List<UserModel> {
+        val query = "SELECT * FROM users"
+        val preparedStatement = connection.prepareStatement(query)
+        val resultSet = preparedStatement.executeQuery()
+        val users = mutableListOf<UserModel>()
+        while (resultSet.next()) {
+            val user = UserModel(
+                id = resultSet.getInt("id"), // changed from getString to getInt
+                username = resultSet.getString("username") ?: "",
+                email = resultSet.getString("email") ?: "",
+                password = resultSet.getString("password") ?: "",
+                phone = resultSet.getString("phone") ?: ""
+            )
+            users.add(user)
         }
         return users
     }
 
-    fun updateUser(id: Int, user: User) {
-        val connection = connectToDatabase()
-        connection?.let {
-            val preparedStatement: PreparedStatement = it.prepareStatement("UPDATE users SET email = ?, username = ?, password = ? WHERE id = ?")
-            preparedStatement.setString(1, user.email)
-            preparedStatement.setString(2, user.username)
-            preparedStatement.setString(3, user.password)
-            preparedStatement.setInt(4, id)
-            val affectedRows = preparedStatement.executeUpdate()
-            if (affectedRows > 0) {
-                println("User updated successfully.")
-            } else {
-                println("Failed to update user.")
-            }
-        }
-    }
-
-    fun deleteUser(id: Int) {
-        val connection = connectToDatabase()
-        connection?.let {
-            val preparedStatement: PreparedStatement = it.prepareStatement("DELETE FROM users WHERE id = ?")
-            preparedStatement.setInt(1, id)
-            val affectedRows = preparedStatement.executeUpdate()
-            if (affectedRows > 0) {
-                println("User deleted successfully.")
-            } else {
-                println("Failed to delete user.")
-            }
-        }
-    }
-
-
-    fun signup(user: User): String {
-        val connection = connectToDatabase()
-        connection?.let {
-            val checkUserStatement = it.prepareStatement("SELECT * FROM users WHERE email = ? OR username = ?")
-            checkUserStatement.setString(1, user.email)
-            checkUserStatement.setString(2, user.username)
-            val resultSet = checkUserStatement.executeQuery()
-            if (resultSet.next()) {
-                return "User with this email or username already exists."
-            } else {
-                val preparedStatement = it.prepareStatement("INSERT INTO users (email, username, password) VALUES (?, ?, ?)")
-                preparedStatement.setString(1, user.email)
-                preparedStatement.setString(2, user.username)
-                preparedStatement.setString(3, user.password)
-                val affectedRows = preparedStatement.executeUpdate()
-                if (affectedRows > 0) {
-                    return "User signed up successfully."
-                }
-            }
-        }
-        return "Failed to sign up user."
-    }
-
-   fun login(email: String?, username: String?, password: String): String {
-    val connection = connectToDatabase()
-    connection?.let {
-        val preparedStatement = it.prepareStatement("SELECT * FROM users WHERE (email = ? OR username = ?) AND password = ?")
-        preparedStatement.setString(1, email)
-        preparedStatement.setString(2, username)
-        preparedStatement.setString(3, password)
+    fun getUserById(userId: Int): UserModel? { // changed from String to Int
+        val query = "SELECT * FROM users WHERE id = ?"
+        val preparedStatement = connection.prepareStatement(query)
+        preparedStatement.setInt(1, userId) // changed from setString to setInt
         val resultSet = preparedStatement.executeQuery()
-        if (resultSet.next()) {
-            return "User logged in successfully."
+        return if (resultSet.next()) {
+            UserModel(
+                id = resultSet.getInt("id"), // changed from getString to getInt
+                username = resultSet.getString("username"),
+                email = resultSet.getString("email"),
+                password = resultSet.getString("password"),
+                phone = resultSet.getString("phone")
+            )
+        } else {
+            null
         }
     }
-    return "Invalid email/username or password."
-}
 
-    fun updateUser(id: Int, username: String?, password: String?): String {
-    val connection = connectToDatabase()
-    connection?.let {
-        val preparedStatement = it.prepareStatement("UPDATE users SET username = COALESCE(?, username), password = COALESCE(?, password) WHERE id = ?")
-        preparedStatement.setString(1, username)
-        preparedStatement.setString(2, password)
-        preparedStatement.setInt(3, id)
-        val affectedRows = preparedStatement.executeUpdate()
-        if (affectedRows > 0) {
-            return "User updated successfully."
+
+    fun deleteUser(userId: Int): UserModel? { // changed from String to Int
+        val user = getUserById(userId)
+        if (user != null) {
+            val query = "DELETE FROM users WHERE id = ?"
+            val preparedStatement = connection.prepareStatement(query)
+            preparedStatement.setInt(1, userId) // changed from setString to setInt
+            preparedStatement.executeUpdate()
         }
+        return user
     }
-    return "Failed to update user."
-}
-
-
 }
