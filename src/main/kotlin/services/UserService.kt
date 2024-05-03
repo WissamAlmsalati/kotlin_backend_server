@@ -1,3 +1,4 @@
+import org.example.models.LoginRequest
 import org.example.models.UserModel
 import java.sql.DriverManager
 
@@ -21,24 +22,24 @@ class UserService() {
         return user
     }
 
-    fun login(email: String, password: String): UserModel? {
-        val query = "SELECT * FROM users WHERE email = ? AND password = ?"
-        val preparedStatement = connection.prepareStatement(query)
-        preparedStatement.setString(1, email)
-        preparedStatement.setString(2, password)
-        val resultSet = preparedStatement.executeQuery()
-        return if (resultSet.next()) {
-            UserModel(
-                id = resultSet.getInt("id"), // changed from getString to getInt
-                username = resultSet.getString("username"),
-                email = resultSet.getString("email"),
-                password = resultSet.getString("password"),
-                phone = resultSet.getString("phone")
-            )
-        } else {
-            null
-        }
+    fun login(loginRequest: LoginRequest): UserModel? {
+    val query = "SELECT * FROM users WHERE email = ? AND password = ?"
+    val preparedStatement = connection.prepareStatement(query)
+    preparedStatement.setString(1, loginRequest.email)
+    preparedStatement.setString(2, loginRequest.password)
+    val resultSet = preparedStatement.executeQuery()
+    return if (resultSet.next()) {
+        UserModel(
+            id = resultSet.getInt("id"),
+            username = resultSet.getString("username"),
+            email = resultSet.getString("email"),
+            password = resultSet.getString("password"),
+            phone = resultSet.getString("phone")
+        )
+    } else {
+        null
     }
+}
 
     fun getAllUsers(): List<UserModel> {
         val query = "SELECT * FROM users"

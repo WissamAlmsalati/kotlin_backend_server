@@ -13,8 +13,7 @@ data class UserModel(
 
 data class LoginRequest(
     val email: String,
-    val password: String,
-)
+    val password: String)
 data class SignUpRequest(
     val id: Int,
     val email: String,

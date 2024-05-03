@@ -3,6 +3,7 @@ import io.ktor.http.*
 import io.ktor.response.*
 import io.ktor.request.*
 import io.ktor.routing.*
+import org.example.models.LoginRequest
 import org.example.models.SignUpRequest
 import org.example.models.UserModel
 
@@ -25,17 +26,15 @@ fun Route.userRoutes(connection: UserService) {
     call.respond(HttpStatusCode.Created, createdUser)
 }
 
-        post("/login") {
-            val params = call.receiveParameters()
-            val email = params["email"] ?: return@post call.respond(HttpStatusCode.BadRequest, "Email is required.")
-            val password = params["password"] ?: return@post call.respond(HttpStatusCode.BadRequest, "Password is required.")
-            val user = userService.login(email, password)
-            if (user != null) {
-                call.respond(user)
-            } else {
-                call.respond(HttpStatusCode.Unauthorized, "Invalid email or password.")
-            }
-        }
+post("/login") {
+    val loginRequest = call.receive<LoginRequest>()
+    val user = userService.login(loginRequest)
+    if (user != null) {
+        call.respond(user)
+    } else {
+        call.respond(HttpStatusCode.Unauthorized, "Invalid email or password.")
+    }
+}
         get("/{id}") {
             val userId = call.parameters["id"]?.toInt() ?: return@get call.respond(HttpStatusCode.BadRequest)
             val user = userService.getUserById(userId) ?: return@get call.respond(HttpStatusCode.NotFound)
